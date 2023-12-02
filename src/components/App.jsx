@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Notify } from 'notiflix';
 
 import { Searchbar } from './Searchbar/Searchbar';
@@ -11,118 +11,98 @@ import { getImages, PER_PAGE } from './services/getImages';
 
 import css from './App.module.css';
 
-export class App extends Component {
-  state = {
-    imageList: null,
-    qwerty: '',
-    page: 1,
-    isModalShow: false,
-    isLoaderShow: false,
-    isLoadMoreShow: false,
-  };
+export const App = () => {
+  const [imageList, setImageList] = useState(null);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [isModalShow, setIsModalShow] = useState(false);
+  const [isLoaderShow, setIsLoaderShow] = useState(false);
+  const [isLoadMoreShow, setIsLoadMoreShow] = useState(false);
+  const [largeImage, setLargeImage] = useState({ src: '', alt: '' });
 
-  onSubmit = event => {
-    const qwerty = event.target.elements.input.value;
-    if (qwerty === '') {
+  const onSubmit = event => {
+    event.preventDefault();
+    const newQuery = event.target.elements.input.value;
+    if (newQuery === '') {
       Notify.info(
         `It seems you didn't write anything, please specify what exactly you are looking for`
       );
     } else {
-      if (this.state.qwerty === qwerty) {
+      if (query === newQuery) {
         Notify.info(
-          `It seems your qwerty duplicate previous, please write another one`
+          `It seems your query duplicate previous, please write another one`
         );
       } else {
-        this.setState({
-          qwerty: qwerty.toLowerCase(),
-          isLoadMoreShow: false,
-          imageList: [],
-          page: 1,
-        });
+        setQuery(newQuery.toLowerCase());
+        setIsLoadMoreShow(false);
+        setImageList([]);
+        setPage(1);
       }
     }
   };
 
-  loadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const loadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  closeModal = () => {
-    this.setState({ isModalShow: false });
+  const closeModal = () => {
+    setIsModalShow(false);
   };
 
-  onClick = (src, alt) => {
-    this.setState({
-      largeImage: {
-        src,
-        alt,
-      },
-      isModalShow: true,
-    });
+  const onClick = (src, alt) => {
+    setLargeImage({ src, alt });
+    setIsModalShow(true);
   };
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.qwerty !== this.state.qwerty ||
-      prevState.page !== this.state.page
-    ) {
-      this.setState({ isLoaderShow: true });
+  useEffect(() => {
+    const fetchData = async () => {
+      if (query === '' || page < 1) return;
+
+      setIsLoaderShow(true);
 
       try {
-        const response = await getImages(this.state.qwerty, this.state.page);
+        const response = await getImages(query, page);
         const lastPage = Math.ceil(response.totalHits / PER_PAGE);
 
         if (response.totalHits === 0) {
           Notify.warning(
             'Sorry, there are no images matching your search query. Please try again.'
           );
-          this.setState({ isLoadMoreShow: false, imageList: [] });
-          console.log('check # 1');
+          setIsLoadMoreShow(false);
+          setImageList([]);
         } else {
-          const newImageList = response.hits;
-          if (this.state.page > 1) {
-            newImageList = [...this.state.imageList, ...response.hits];
+          let newImageList = response.hits;
+          if (page > 1) {
+            newImageList = [...imageList, ...response.hits];
           }
 
-          this.setState(prevState => ({
-            imageList: newImageList,
-            isLoadMoreShow: response.hits.length === PER_PAGE,
-          }));
+          setImageList(newImageList);
+          setIsLoadMoreShow(response.hits.length === PER_PAGE);
         }
       } catch (error) {
         console.log(error);
       }
 
-      this.setState({ isLoaderShow: false });
-    }
-  }
+      setIsLoaderShow(false);
+    };
 
-  render() {
-    const { imageList, isLoadMoreShow, isModalShow, largeImage } = this.state;
+    fetchData();
+  }, [query, page]);
 
-    const { onClick, loadMore, onSubmit, closeModal } = this;
-
-    return (
-      <>
-        <div className={css.App}>
-          <Searchbar onSubmit={onSubmit} />
-          {imageList && (
-            <ImageGallery imageList={imageList} onClick={onClick} />
-          )}
-          {this.state.isLoaderShow && <Loader />}
-          {imageList && isLoadMoreShow && <Button onClick={loadMore} />}
-          {isModalShow && (
-            <Modal
-              src={largeImage.src}
-              alt={largeImage.alt}
-              isModalShow={isModalShow}
-              closeModal={closeModal}
-            />
-          )}
-        </div>
-      </>
-    );
-  }
-}
+  return (
+    <div className={css.App}>
+      <Searchbar onSubmit={onSubmit} />
+      {imageList && <ImageGallery imageList={imageList} onClick={onClick} />}
+      {isLoaderShow && <Loader />}
+      {imageList && isLoadMoreShow && <Button onClick={loadMore} />}
+      {isModalShow && (
+        <Modal
+          src={largeImage.src}
+          alt={largeImage.alt}
+          isModalShow={isModalShow}
+          closeModal={closeModal}
+        />
+      )}
+    </div>
+  );
+};
