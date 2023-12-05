@@ -62,7 +62,6 @@ export const App = () => {
 
       try {
         const response = await getImages(query, page);
-        const lastPage = Math.ceil(response.totalHits / PER_PAGE);
 
         if (response.totalHits === 0) {
           Notify.warning(
@@ -73,7 +72,7 @@ export const App = () => {
         } else {
           let newImageList = response.hits;
           if (page > 1) {
-            newImageList = [...imageList, ...response.hits];
+            setImageList(pervstate => [...pervstate, ...response.hits]);
           }
 
           setImageList(newImageList);
