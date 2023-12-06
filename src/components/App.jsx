@@ -68,14 +68,13 @@ export const App = () => {
             'Sorry, there are no images matching your search query. Please try again.'
           );
           setIsLoadMoreShow(false);
-          setImageList([]);
         } else {
-          let newImageList = response.hits;
           if (page > 1) {
-            setImageList(pervstate => [...pervstate, ...response.hits]);
+            setImageList(prevState => [...prevState, ...response.hits]);
+          } else {
+            setImageList(response.hits);
           }
 
-          setImageList(newImageList);
           setIsLoadMoreShow(response.hits.length === PER_PAGE);
         }
       } catch (error) {
